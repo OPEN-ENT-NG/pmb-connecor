@@ -10,7 +10,6 @@
 /src/main/resources/view/fr.openent.pmb-connector.html
 package-lock.json
 /build.sh
-/docker-compose.yml
 /src/main/resources/public/js/
 .idea
 *.iml
