@@ -1,10 +1,10 @@
     {
-      "name": "fr.openent~pmb-connector~1.0-SNAPSHOT",
+      "name": "fr.openent.pmb-connector~1.0-SNAPSHOT",
       "config": {
-        "main" : "fr.openent.pmb-connector.Pmb-connector",
+        "main" : "fr.openent.pmb.Pmb",
         "port" : 8130,
         "app-name" : "Pmb-connector",
-    	"app-address" : "/pmb-connector",
+    	"app-address" : "/pmb",
     	"app-icon" : "Pmb-connector-large",
         "host": "${host}",
         "ssl" : $ssl,
@@ -13,6 +13,9 @@
         "integration-mode" : "HTTP",
         "app-registry.port" : 8012,
         "mode" : "${mode}",
-        "entcore.port" : 8009
+        "entcore.port" : 8009,
+        "export": {
+            "group_name": "PMB gestionnaires"
+        }
       }
     }

@@ -7,7 +7,7 @@
 /.settings
 .jshintrc
 /src/main/resources/view/
-/src/main/resources/view/pmb-connector.html
+/src/main/resources/view/fr.openent.pmb-connector.html
 package-lock.json
 /build.sh
 /docker-compose.yml
