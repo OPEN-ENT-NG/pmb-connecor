@@ -1,5 +1,5 @@
 {
-	"main" : "fr.openent.pmb-connector.Pmb-connector",
+	"main": "fr.openent.pmb.Pmb",
 	"port" : 8130,
 	"app-name" : "Pmb-connector",
 	"app-address" : "/pmb-connector",
