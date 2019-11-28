@@ -1,5 +1,5 @@
     {
-      "name": "fr.openent.pmb~connector~1.0.1",
+      "name": "fr.openent.pmb~connector~1.0-SNAPSHOT",
       "config": {
         "main" : "fr.openent.pmb.Pmb",
         "port" : 8130,
