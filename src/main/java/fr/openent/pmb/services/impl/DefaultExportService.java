@@ -27,4 +27,13 @@ public class DefaultExportService implements ExportService {
 
         Neo4j.getInstance().execute(query, params, Neo4jResult.validResultHandler(handler));
     }
+
+    @Override
+    public void retrieveDeployedStructures(Handler<Either<String, JsonArray>> handler) {
+        String query = "MATCH(s:Structure) WHERE HAS(s.exports) AND 'PMB' IN s.export RETURN s.UAI as uai, s.id as id";
+        JsonObject params = new JsonObject()
+                .put("group_name", config.getString("group_name", ""));
+
+        Neo4j.getInstance().execute(query, params, Neo4jResult.validResultHandler(handler));
+    }
 }

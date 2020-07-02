@@ -9,8 +9,10 @@ public interface ExportService {
     /**
      * Get structure user based on structure UAI
      *
-     * @param UAI     Structure UAI
+     * @param uai     Structure UAI
      * @param handler Function handler returning data
      */
     void getUser(String uai, Handler<Either<String, JsonArray>> handler);
+
+    void retrieveDeployedStructures(Handler<Either<String, JsonArray>> handler);
 }

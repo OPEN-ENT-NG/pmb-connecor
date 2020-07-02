@@ -16,6 +16,16 @@
         "entcore.port" : 8009,
         "export": {
             "group_name": "PMB gestionnaires"
+        },
+        "PMB": {
+            "host": "${pmbServer}",
+            "endpoint": "${pmbEndpoint}",
+            "db_prefix": "${pmbDBPrefix}",
+            "page_size": ${pmbPageSize},
+            "credentials": {
+                "username": "${pmbUsername}",
+                "password": "${pmbPassword}"
+            }
         }
       }
     }
