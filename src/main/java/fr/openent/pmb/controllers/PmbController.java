@@ -1,39 +1,126 @@
 package fr.openent.pmb.controllers;
 
+import fr.openent.pmb.Pmb;
+import fr.openent.pmb.helper.HttpClientHelper;
 import fr.openent.pmb.services.ExportService;
+import fr.openent.pmb.services.SchoolService;
 import fr.openent.pmb.services.impl.DefaultExportService;
+import fr.openent.pmb.services.impl.DefaultSchoolService;
 import fr.openent.pmb.worker.AmassWorker;
 import fr.wseduc.bus.BusAddress;
 import fr.wseduc.rs.Get;
+import fr.wseduc.security.ActionType;
 import fr.wseduc.security.SecuredAction;
+import fr.wseduc.webutils.http.Renders;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.entcore.common.controller.ControllerHelper;
+import org.entcore.common.http.filter.ResourceFilter;
+import org.entcore.common.http.filter.SuperAdminFilter;
 
+import java.io.UnsupportedEncodingException;
+import java.util.stream.Stream;
+
+import static fr.openent.pmb.Pmb.pmbConfig;
 import static org.entcore.common.http.response.DefaultResponseHandler.arrayResponseHandler;
 
 public class PmbController extends ControllerHelper {
-
-    private ExportService exportService;
+    private static final Logger log = LoggerFactory.getLogger(PmbController.class);
+    private final ExportService exportService;
+    private final SchoolService schoolService;
 
     public PmbController(JsonObject exportConfig) {
         super();
-        exportService = new DefaultExportService(exportConfig);
+        this.exportService = new DefaultExportService(exportConfig);
+        this.schoolService = new DefaultSchoolService();
     }
 
     @Get("")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(SuperAdminFilter.class)
     public void render(HttpServerRequest request) {
         renderView(request);
     }
 
     @Get("/gestionnaire/list")
-    @SecuredAction("pmb.structure.export")
+    @SecuredAction(Pmb.STRUCTURE_EXPORT_RIGHT)
     public void listGestionnaire(HttpServerRequest request) {
         String uai = request.getParam("uai");
-        exportService.getUser(uai, arrayResponseHandler(request));
+        String type = request.getParam("type");
+        if(uai == null){
+            log.error("No uai sent in request pmb/gestionnaire/list");
+            badRequest(request);
+        }else{
+            JsonArray UAIs = new JsonArray().add(uai);
+            if(type != null && type.equals(Pmb.MANAGER_TYPE_PRET)){
+                exportService.getUser(UAIs, type, arrayResponseHandler(request));
+            }else{
+                schoolService.getCity(uai, handler -> {
+                    if (handler.isLeft()) {
+                        log.error("Unable to retrieve structures from this city", handler.left().getValue());
+                        badRequest(request);
+                    } else {
+                        JsonArray structures = handler.right().getValue();
+                        buildUAIList(structures, UAIs, uai);
+                        exportService.getUser(UAIs, type, arrayResponseHandler(request));
+                    }
+                });
+            }
+        }
+    }
+
+    @Get("/user/structures/list")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(SuperAdminFilter.class)
+    public void listUserInStructuresByUAI(final HttpServerRequest request) {
+        String uai = request.getParam("uai");
+        String type = request.getParam("type");
+        if(uai == null){
+            log.error("No uai sent in request pmb/structures/list");
+            badRequest(request);
+        }else{
+            JsonArray UAIs = new JsonArray().add(uai);
+            if (type != null && type.equals(Pmb.MANAGER_TYPE_PRET)) {
+                directoryUsersExport(request, UAIs);
+            } else {
+                schoolService.getCity(uai, handler -> {
+                    if (handler.isLeft()) {
+                        log.error("Unable to retrieve structures from this city", handler.left().getValue());
+                        badRequest(request);
+                    } else {
+                        JsonArray structures = handler.right().getValue();
+                        buildUAIList(structures, UAIs, uai);
+                        directoryUsersExport(request, UAIs);
+                    }
+                });
+            }
+        }
+    }
+
+    private void directoryUsersExport(HttpServerRequest request, JsonArray UAIs) {
+        StringBuilder url = new StringBuilder().append(pmbConfig.getString("host"))
+                .append("/directory/user/structures/list?");
+        for (Object UAI : UAIs) {
+            url.append("uai=").append((String) UAI).append("&");
+        }
+        try {
+            HttpClientHelper.webServicePmbGet(url.deleteCharAt(url.lastIndexOf("&")).toString(), request, handler -> {
+                if (handler.isLeft()) {
+                    log.error("Unable to retrieve users from this structures", handler.left().getValue());
+                    badRequest(request);
+                } else {
+                    JsonArray users = handler.right().getValue().toJsonArray();
+                    Renders.renderJson(request, users);
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
     }
 
     @BusAddress("fr.openent.pmb.controllers.PmbController|amass")
@@ -44,22 +131,89 @@ public class PmbController extends ControllerHelper {
                 log.error("Unable to retrieve deployed structures", handler.left().getValue());
                 return;
             }
-
             JsonArray structures = handler.right().getValue();
-            JsonObject map = new JsonObject();
-            structures.forEach(structure -> {
-                JsonObject s = (JsonObject) structure;
-                map.put(s.getString("uai"), s.getString("id"));
+            schoolService.list(event -> {
+                if (event.isLeft()) {
+                    log.error("Unable to retrieve structures list in pmb SQL DataBase", event.left().getValue());
+                    return;
+                }
+                JsonArray citeStructures = event.right().getValue();
+                JsonObject map = new JsonObject();
+                structures.forEach(structure -> {
+                    JsonObject s = (JsonObject) structure;
+                    String uaiToReturn = principalOrDefaultUAI(citeStructures, s.getString("uai"));
+                    String idStructure = s.getString("id");
+                    if(!uaiToReturn.equals(s.getString("uai"))){
+                        idStructure =  ((JsonObject) citeStructures.stream()
+                                .filter(obj -> ((JsonObject) obj).getString("uai").equals(uaiToReturn)).findFirst().get())
+                                .getString("idneo");
+                    }
+                    map.put(uaiToReturn, idStructure);
+                });
+
+                JsonObject workerConfig = new JsonObject()
+                        .put("structures", map);
+                DeploymentOptions options = new DeploymentOptions()
+                        .setConfig(workerConfig)
+                        .setWorker(true);
+                vertx.deployVerticle(AmassWorker::new, options);
+
+                message.reply(new JsonObject().put("status", "accepted"));
             });
-
-            JsonObject workerConfig = new JsonObject()
-                    .put("structures", map);
-            DeploymentOptions options = new DeploymentOptions()
-                    .setConfig(workerConfig)
-                    .setWorker(true);
-            vertx.deployVerticle(AmassWorker::new, options);
         });
+    }
 
-        message.reply(new JsonObject().put("status", "accepted"));
+    @BusAddress("fr.openent.pmb.controllers.PmbController|getPrincipalUAIs")
+    public void getPrincipalUAIs(Message<JsonObject> message) {
+        JsonObject body = message.body();
+        JsonArray uais = body.getJsonArray("uais");
+        schoolService.list(event -> {
+            if (event.isLeft()) {
+                log.error("Unable to retrieve structures list in pmb SQL DataBase", event.left().getValue());
+                JsonObject json = (new JsonObject())
+                        .put("status", "error")
+                        .put("message", "invalid.action");
+                message.reply(json);
+            } else {
+                JsonArray deployedStructures = event.right().getValue();
+                JsonArray returnBody = new JsonArray();
+                for(Object uai : uais){
+                    String UAI = (String) uai;
+                    returnBody.add(principalOrDefaultUAI(deployedStructures, UAI));
+                }
+                JsonObject response = new JsonObject()
+                        .put("status", "ok")
+                        .put("result", returnBody);
+                message.reply(response);
+            }
+        });
+    }
+
+    private String principalOrDefaultUAI(JsonArray deployedStructures, String UAI) {
+        Stream<String> listUAISQL = deployedStructures.stream().map(obj -> ((JsonObject) obj).getString("uai"));
+        if(listUAISQL.anyMatch(uaiSQL -> uaiSQL.equals(UAI))){
+            JsonObject sqlInfos = (JsonObject) deployedStructures.stream()
+                    .filter(obj -> ((JsonObject) obj).getString("uai").equals(UAI)).findFirst().get();
+            if(sqlInfos.getBoolean("principal")){
+                return UAI;
+            }else{
+                Integer idPrincipal = sqlInfos.getInteger("id_principal");
+                JsonObject principalInfos = (JsonObject) deployedStructures.stream()
+                        .filter(obj -> ((JsonObject) obj).getInteger("id").equals(idPrincipal)).findFirst().get();
+                return principalInfos.getString("uai");
+            }
+        }else{
+            return UAI;
+        }
+    }
+
+    private void buildUAIList(JsonArray structures, JsonArray UAIs, String uaiParams) {
+        for (int i = 0; i < structures.size(); i++) {
+            JsonObject structure = structures.getJsonObject(i);
+            String uaiToAdd = structure.getString("uai", "");
+            if(!uaiParams.equals(uaiToAdd)){
+                UAIs.add(uaiToAdd);
+            }
+        }
     }
 }

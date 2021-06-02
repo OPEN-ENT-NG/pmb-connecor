@@ -1,0 +1,24 @@
+<lightbox show="vm.lightbox.attach" on-close="vm.closeAttach()">
+    <h2><i18n>pmb.attach</i18n></h2>
+    <section class="cell twelve">
+        <div class="main-button">
+            <button class="cell" ng-click="vm.doAttach()"><i18n>pmb.attach.button</i18n></button>
+        </div>
+    </section>
+    <div>
+        <multi-combo title="Choisissez un ou plusieurs établissements"
+                     combo-model="vm.neoSchools.all"
+                     search-on="search" order-by="uai"
+                     filtered-model="filterChoice.schools"
+                     labels="comboLabels"
+                     class="inline-block horizontal-spacing no-border">
+        </multi-combo>
+    </div>
+    <div class="eleven attach-list">
+        Les établissements suivants :
+        <ul><li ng-repeat="school in filterChoice.schools">[[school.uai]] [[school.nom]]</li></ul>
+        utiliseront dorénvant la base PMB de l'établisement principal
+        [[vm.getSchool(vm.selectedSchoolId).uai]] [[vm.getSchool(vm.selectedSchoolId).nom]].
+        Souhaitez-vous continuer ?
+    </div>
+</lightbox>

@@ -1,8 +1,8 @@
     {
-      "name": "fr.openent~pmb-connector~1.3.0",
+      "name": "fr.openent~pmb-connector~1.3-SNAPSHOT",
       "config": {
         "main" : "fr.openent.pmb.Pmb",
-        "port" : 8130,
+        "port" : 8068,
         "app-name" : "Pmb-connector",
     	"app-address" : "/pmb",
     	"app-icon" : "Pmb-connector-large",
@@ -14,9 +14,13 @@
         "app-registry.port" : 8012,
         "mode" : "${mode}",
         "entcore.port" : 8009,
+        "sql" : true,
+        "db-schema" : "pmb",
         "export": {
-            "group_name": "PMB gestionnaires"
+            "group_manager": "PMB gestionnaires",
+            "group_manager_lend_manual" : "PMB Gestionnaires Prêts de Manuels"
         },
+        "infraMail": "${infraMailPmb}",
         "PMB": {
             "host": "${pmbServer}",
             "endpoint": "${pmbEndpoint}",

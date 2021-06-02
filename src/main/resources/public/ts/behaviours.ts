@@ -1,4 +1,12 @@
 import { Behaviours } from 'entcore';
 
-Behaviours.register('pmb-connector', {
+const rights = {
+    workflow: {
+        access: 'fr.openent.pmb.controllers.PmbController|render'
+    }
+};
+
+Behaviours.register('pmb', {
+    rights: rights,
+    dependencies: {}
 });

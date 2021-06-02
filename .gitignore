@@ -17,3 +17,6 @@ node_modules
 src/main/resources/public/dist
 rev-manifest.json
 /src/main/resources/public/template/entcore/
+/gradlew
+/gradlew.bat
+/gradle
