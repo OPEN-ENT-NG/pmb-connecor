@@ -15,7 +15,8 @@
         "mode" : "${mode}",
         "entcore.port" : 8009,
         "export": {
-            "group_name": "PMB gestionnaires"
+            "group_manager": "PMB gestionnaires",
+            "group_manager_lend_manual" : "PMB Gestionnaires Prêts de Manuels"
         },
         "PMB": {
             "host": "${pmbServer}",

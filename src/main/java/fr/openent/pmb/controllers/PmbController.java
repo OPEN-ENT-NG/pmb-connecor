@@ -33,7 +33,8 @@ public class PmbController extends ControllerHelper {
     @SecuredAction("pmb.structure.export")
     public void listGestionnaire(HttpServerRequest request) {
         String uai = request.getParam("uai");
-        exportService.getUser(uai, arrayResponseHandler(request));
+        String type = request.getParam("type");
+        exportService.getUser(uai, type, arrayResponseHandler(request));
     }
 
     @BusAddress("fr.openent.pmb.controllers.PmbController|amass")
