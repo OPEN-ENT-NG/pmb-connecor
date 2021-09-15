@@ -14,10 +14,13 @@
         "app-registry.port" : 8012,
         "mode" : "${mode}",
         "entcore.port" : 8009,
+        "sql" : true,
+        "db-schema" : "pmb",
         "export": {
             "group_manager": "PMB gestionnaires",
             "group_manager_lend_manual" : "PMB Gestionnaires Prêts de Manuels"
         },
+        "infraMail": "${infraMailPmb}",
         "PMB": {
             "host": "${pmbServer}",
             "endpoint": "${pmbEndpoint}",

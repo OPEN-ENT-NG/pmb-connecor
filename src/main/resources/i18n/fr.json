@@ -1,3 +1,21 @@
 {
-  "pmb-connector.title": "Pmb-connector"
+  "pmb.title": "Pmb-connector",
+  "pmb.list": "Liste des Cités Scolaires PMB",
+  "pmb.create": "Ajout d'une cité scolaire",
+  "pmb.attach": "Rattachement d'un établissement",
+  "pmb.delete": "Suppression d'un établissement",
+  "pmb.create.button": "Ajouter une cité scolaire",
+  "pmb.attach.button": "Rattacher un établissement",
+  "pmb.delete.button": "Supprimer un établissement",
+  "pmb.delete.alert.main": "Cette action est irréversible : une base PMB doit être générée pour chacun des établissements secondaires. Souhaitez-vous continuer ?",
+  "pmb.delete.alert.secondary": "Cette action est irréversible : une base PMB doit être générée pour l'établissement secondaire. Souhaitez-vous continuer ?",
+  "pmb.main": "Établissement principal",
+  "pmb.secondary": "Établissement secondaire",
+  "pmb.options.select": "-- Sélectionnez une option --",
+
+  "pmb.error.schools.sync": "Erreur lors de la synchronisation des écoles",
+  "pmb.error.schoolService.list": "Erreur lors du listage des écoles",
+  "pmb.error.schoolService.create": "Erreur lors de la création de l' / des école(s)",
+  "pmb.error.schoolService.delete": "Erreur lors de la suppression de l'école",
+  "pmb.error.emailSendService.send": "Erreur lors de l'envoi de l'email à l'infra"
 }

@@ -1,0 +1,53 @@
+<div class="row" ng-controller="PmbController as vm">
+    <div class="row">
+        <section class="cell twelve">
+            <div>
+                <h1>
+                    <a href="#/"><i18n>pmb.title</i18n></a>
+                </h1>
+            </div>
+        </section>
+
+        <section class="cell five">
+            <div>
+                <h2>
+                    <i18n>pmb.list</i18n>
+                </h2>
+            </div>
+        </section>
+
+        <section class="cell seven zero-mobile">
+            <div class="main-button">
+                <button class="cell" ng-click="vm.openCreate()"><i18n>pmb.create.button</i18n></button>
+            </div>
+        </section>
+    </div>
+
+    <!--Liste des cités scolaires-->
+    <section class="cell eleven city-list">
+
+        <div class="city"
+             ng-repeat="mSchool in vm.mainSchools | orderBy : 'uai'">
+
+            <div class="main-school">
+                <span class="uainame">
+                    <i class="trash" ng-click="vm.openDelete(mSchool.id)"></i>
+                    [[mSchool.uai]] [[mSchool.nom]]</span>
+                <button class="cell" ng-click="vm.openAttach(mSchool.id)"><i18n>pmb.attach.button</i18n></button>
+            </div>
+
+            <div class="secondary-schools">
+                <div class="secondary-school"
+                     ng-repeat="sSchool in vm.getSecondarySchools(mSchool) | orderBy : 'uai'">
+                    <span>
+                        [[sSchool.uai]] [[sSchool.nom]]
+                        <i class="trash" ng-click="vm.openDelete(sSchool.id)"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <container template='lightbox'></container>
+
+</div>

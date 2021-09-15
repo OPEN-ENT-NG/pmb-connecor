@@ -1,0 +1,10 @@
+<lightbox show="vm.lightbox.delete" on-close="vm.closeDelete()">
+    <h2><i18n>pmb.delete</i18n></h2>
+    <section class="cell twelve">
+        <div class="main-button">
+            <button class="cell" ng-click="vm.doDelete()"><i18n>pmb.delete.button</i18n></button>
+        </div>
+    </section>
+    <div ng-if="vm.getSchool(vm.selectedSchoolId).principal"><i18n>pmb.delete.alert.main</i18n></div>
+    <div ng-if="!vm.getSchool(vm.selectedSchoolId).principal"><i18n>pmb.delete.alert.secondary</i18n></div>
+</lightbox>

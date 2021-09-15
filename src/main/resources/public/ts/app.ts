@@ -8,6 +8,6 @@ for(let controller in controllers){
 routes.define(function($routeProvider){
 	$routeProvider
 		.otherwise({
-			action: 'defaultView'
+			action: 'default'
 		});
 })

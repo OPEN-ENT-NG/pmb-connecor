@@ -1,0 +1,17 @@
+<lightbox show="vm.lightbox.create" on-close="vm.closeCreate()">
+    <h2><i18n>pmb.create</i18n></h2>
+    <section class="cell twelve">
+        <div class="main-button">
+            <button class="cell" ng-click="vm.doCreate()"><i18n>pmb.create.button</i18n></button>
+        </div>
+    </section>
+    <div>
+        <multi-combo title="Choisissez un établissement"
+                     combo-model="vm.neoSchools.all"
+                     search-on="search" order-by="uai"
+                     filtered-model="filterChoice.schools"
+                     labels="comboLabels"
+                     class="inline-block horizontal-spacing no-border">
+        </multi-combo>
+    </div>
+</lightbox>

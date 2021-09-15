@@ -1,8 +1,8 @@
 {
 	"main": "fr.openent.pmb.Pmb",
-	"port" : 8130,
+	"port" : 8068,
 	"app-name" : "Pmb-connector",
-	"app-address" : "/pmb-connector",
+	"app-address" : "/pmb",
 	"app-icon" : "pmb-connector-large",
 	"app-displayName" : "Pmb-connector",
 	"mode": "dev",
