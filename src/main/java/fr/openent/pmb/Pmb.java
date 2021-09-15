@@ -11,8 +11,6 @@ import org.entcore.common.email.EmailFactory;
 import org.entcore.common.http.BaseServer;
 
 public class Pmb extends BaseServer {
-    public static final String MANAGER_TYPE_PRET = "pret";
-    public static final String MANAGER_TYPE_CDI = "cdi";
 
     public static String DB_SCHEMA;
     public static String SCHOOL_TABLE;
