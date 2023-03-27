@@ -1,6 +1,7 @@
 package fr.openent.pmb.controllers;
 
 import fr.openent.pmb.Pmb;
+import fr.openent.pmb.core.constants.Field;
 import fr.openent.pmb.helper.HttpClientHelper;
 import fr.openent.pmb.services.ExportService;
 import fr.openent.pmb.services.SchoolService;
@@ -13,6 +14,7 @@ import fr.wseduc.security.ActionType;
 import fr.wseduc.security.SecuredAction;
 import fr.wseduc.webutils.http.Renders;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonArray;
@@ -22,8 +24,12 @@ import io.vertx.core.logging.LoggerFactory;
 import org.entcore.common.controller.ControllerHelper;
 import org.entcore.common.http.filter.ResourceFilter;
 import org.entcore.common.http.filter.SuperAdminFilter;
+import org.entcore.common.user.UserInfos;
 
 import java.io.UnsupportedEncodingException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static fr.openent.pmb.Pmb.pmbConfig;
@@ -57,8 +63,27 @@ public class PmbController extends ControllerHelper {
             badRequest(request);
         }else{
             JsonArray UAIs = new JsonArray().add(uai);
-            if(type != null && type.equals(Pmb.MANAGER_TYPE_PRET)){
-                exportService.getUser(UAIs, type, arrayResponseHandler(request));
+            if(type != null && type.equals(Pmb.MANAGER_TYPE_PRET)) {
+                JsonArray users = new JsonArray();
+                exportService.getUsers(UAIs, type)
+                        .compose(usersAsync -> {
+                            users.addAll(usersAsync);
+                            List<String> userIds = usersAsync.stream()
+                                    .filter(JsonObject.class::isInstance)
+                                    .map(JsonObject.class::cast)
+                                    .map(user -> user.getString(Field.ID, ""))
+                                    .collect(Collectors.toList());
+                            userIds.remove("");
+                            return exportService.getUserLendGroupUAIs(userIds);
+                        })
+                        .compose(usersWithUAIs -> this.addUaisToUsers(users, usersWithUAIs))
+                        .onSuccess(formattedUsers -> Renders.renderJson(request, new JsonArray(formattedUsers)))
+                        .onFailure(error -> {
+                            String errorMessage = String.format("[Pmb-connector@%s::listGestionnaire]: an error has " +
+                                            "occurred while finding users info: %s", this.getClass().getSimpleName(), error.getMessage());
+                            log.error(errorMessage);
+                            renderError(request, new JsonObject().put(Field.ERROR, error.getMessage()));
+                        });
             }else{
                 schoolService.getCity(uai, handler -> {
                     if (handler.isLeft()) {
@@ -72,6 +97,18 @@ public class PmbController extends ControllerHelper {
                 });
             }
         }
+    }
+
+    private Future<List<JsonObject>> addUaisToUsers(JsonArray users, JsonArray usersWithUAIs) {
+        Map<String, JsonArray> uaisMapByUserId = usersWithUAIs.stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .collect(Collectors.toMap(e -> e.getString(Field.ID), entries -> entries.getJsonArray(Field.UAIS)));
+        return Future.succeededFuture(users.stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .map(user -> user.put(Field.UAIS, uaisMapByUserId.getOrDefault(user.getString(Field.ID), new JsonArray())))
+                .collect(Collectors.toList()));
     }
 
     @Get("/user/structures/list")

@@ -1,13 +1,20 @@
 package fr.openent.pmb.services.impl;
 
 import fr.openent.pmb.Pmb;
+import fr.openent.pmb.core.constants.Field;
+import fr.openent.pmb.helper.FutureHelper;
 import fr.openent.pmb.services.ExportService;
 import fr.wseduc.webutils.Either;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.entcore.common.neo4j.Neo4j;
 import org.entcore.common.neo4j.Neo4jResult;
+
+import java.util.Arrays;
+import java.util.List;
 
 
 public class DefaultExportService implements ExportService {
@@ -22,7 +29,7 @@ public class DefaultExportService implements ExportService {
     public void getUser(JsonArray UAIs, String type, Handler<Either<String, JsonArray>> handler) {
         String query = "MATCH (s:Structure)<-[:DEPENDS]-(g:ManualGroup {name:{group_name}})<-[:IN]-(u:User) " +
                 "WHERE s.UAI IN {uais} " +
-                "RETURN DISTINCT u.externalId as externalId, u.firstName as firstName, u.lastName as lastName, u.login as login, " +
+                "RETURN DISTINCT u.externalId as externalId, u.firstName as firstName, u.lastName as lastName, u.login as login, u.id as id, " +
                 "CASE WHEN u.emailInternal IS NULL THEN u.email ELSE u.emailInternal END as emailInterne;";
 
         JsonObject params = new JsonObject().put("uais", UAIs);
@@ -45,6 +52,34 @@ public class DefaultExportService implements ExportService {
         }
 
         Neo4j.getInstance().execute(query, params, Neo4jResult.validResultHandler(handler));
+    }
+
+    @Override
+    public Future<JsonArray> getUsers(JsonArray UAIs, String type) {
+        Promise<JsonArray> promise = Promise.promise();
+
+        this.getUser(UAIs, type, FutureHelper.handlerJsonArray(promise));
+
+        return promise.future();
+    }
+
+    @Override
+    public Future<JsonArray> getUserLendGroupUAIs(List<String> userIds) {
+        Promise<JsonArray> promise = Promise.promise();
+
+        String query = "MATCH (s:Structure)<-[:DEPENDS]-(g:ManualGroup {name:{group_name}})<-[:IN]-(u:User) " +
+                "WHERE u.id IN {user_ids} " +
+                "RETURN u.id as id, collect(s.UAI) as uais;";
+
+
+        JsonObject params = new JsonObject().put(Field.GROUP_NAME, exportConfig.getString(Field.GROUP_MANAGER_LEND_MANUAL))
+                .put(Field.USER_IDS, new JsonArray(userIds));
+
+
+        Neo4j.getInstance().execute(query, params, Neo4jResult.validResultHandler(FutureHelper.handlerJsonArray(promise)));
+
+
+        return promise.future();
     }
 
     @Override
