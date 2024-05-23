@@ -5,6 +5,7 @@ import fr.openent.pmb.controllers.PmbController;
 import fr.openent.pmb.controllers.SchoolController;
 import fr.openent.pmb.server.PMBServer;
 import fr.wseduc.webutils.email.EmailSender;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.entcore.common.email.EmailFactory;
@@ -24,8 +25,8 @@ public class Pmb extends BaseServer {
     public static JsonObject pmbConfig;
 
     @Override
-    public void start() throws Exception {
-        super.start();
+    public void start(Promise<Void> startPromise) throws Exception {
+        super.start(startPromise);
 
         DB_SCHEMA = config.getString("db-schema");
         SCHOOL_TABLE = DB_SCHEMA + ".etablissement";
@@ -42,6 +43,8 @@ public class Pmb extends BaseServer {
         addController(new PmbController(exportConfig));
         addController(new SchoolController());
         addController(new EmailSendController(emailSender, config.getString("infraMail", null)));
+        startPromise.tryComplete();
+        startPromise.tryFail("[Pmb-connector@Pmb::start] Fail to start Pmb-connector");
     }
 
 }

@@ -6,10 +6,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -90,20 +87,25 @@ public class PMBServer {
     }
 
     public void request(String uai, JsonObject content, Handler<AsyncResult<JsonObject>> handler) {
-        HttpClientRequest req = httpClient.postAbs(this.uri(uai), response -> {
-            if (response.statusCode() != 200) {
-                handler.handle(Future.failedFuture(response.statusMessage()));
-                return;
-            }
+        RequestOptions requestOptions = new RequestOptions()
+                .setAbsoluteURI(this.uri(uai))
+                .setMethod(HttpMethod.POST)
+                .addHeader(HttpHeaders.CONTENT_TYPE.toString(), "application/json")
+                .addHeader(HttpHeaders.AUTHORIZATION.toString(), String.format("Basic %s", credential.basic()));
 
-            Buffer body = Buffer.buffer();
-            response.handler(body::appendBuffer);
-            response.endHandler(aVoid -> handler.handle(Future.succeededFuture(new JsonObject(new String(body.getBytes())))));
-            response.exceptionHandler(throwable -> handler.handle(Future.failedFuture(throwable)));
-        });
-        req.putHeader(HttpHeaders.CONTENT_TYPE.toString(), "application/json");
-        req.putHeader(HttpHeaders.AUTHORIZATION.toString(), String.format("Basic %s", credential.basic()));
-        req.end(content.encode());
+        httpClient.request(requestOptions)
+                .flatMap(request -> request.send(content.encode()))
+                .onSuccess(response -> {
+                    if (response.statusCode() != 200) {
+                        handler.handle(Future.failedFuture(response.statusMessage()));
+                        return;
+                    }
+                    Buffer body = Buffer.buffer();
+                    response.bodyHandler(body::appendBuffer);
+                    response.endHandler(aVoid -> handler.handle(Future.succeededFuture(new JsonObject(new String(body.getBytes())))));
+                    response.exceptionHandler(throwable -> handler.handle(Future.failedFuture(throwable)));
+                })
+                .onFailure(throwable -> handler.handle(Future.failedFuture(throwable)));
     }
 
     public String host() {
