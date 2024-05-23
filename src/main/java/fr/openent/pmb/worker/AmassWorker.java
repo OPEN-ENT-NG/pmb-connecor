@@ -32,15 +32,15 @@ public class AmassWorker extends AbstractVerticle {
             return;
         }
 
-        List<Future> futures = new ArrayList<>();
+        List<Future<Void>> futures = new ArrayList<>();
         for (String uai : structures.fieldNames()) {
-            Future<Void> future = Future.future();
+            Promise<Void> promise = Promise.promise();
             log.info(String.format("Amassing %s bibliographic record", uai));
-            amass(uai, structures.getString(uai), future);
-            futures.add(future);
+            amass(uai, structures.getString(uai), promise);
+            futures.add(promise.future());
         }
 
-        CompositeFuture.any(futures).setHandler(ar -> {
+        Future.any(futures).onComplete(ar -> {
             report.end();
             log.info(report.generate().encodePrettily());
             log.info(String.format("[Worker@%s] Stopping PMB amass worker", vertx.getOrCreateContext().deploymentID()));
