@@ -20,3 +20,6 @@ rev-manifest.json
 /gradlew
 /gradlew.bat
 /gradle
+.env
+target
+dependency-reduced-pom.xml
