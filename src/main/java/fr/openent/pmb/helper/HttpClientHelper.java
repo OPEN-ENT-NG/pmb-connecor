@@ -4,10 +4,8 @@ import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.*;
+import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.net.ProxyOptions;
 import org.entcore.common.controller.ControllerHelper;
@@ -74,8 +72,34 @@ public class HttpClientHelper extends ControllerHelper {
             return;
         }
 
-        final HttpClientRequest httpClientRequest = httpClient.getAbs(url.toString(), response -> {
-            if (response.statusCode() == 200) {
+        RequestOptions requestOptions = new RequestOptions()
+                .setAbsoluteURI(url.toString())
+                .setMethod(HttpMethod.GET)
+                .setHeaders(new HeadersMultiMap());
+
+        for(String key : request.headers().names()){
+            requestOptions.putHeader(key, request.getHeader(key));
+        }
+        requestOptions.putHeader("Host", pmbConfig.getString("header"));
+        requestOptions.putHeader("Content-type", "application/x-www-form-urlencoded");
+
+
+        httpClient.request(requestOptions)
+            .flatMap(clientRequest ->  {
+                clientRequest.setFollowRedirects(true);
+                return clientRequest.send();
+            })
+            .onSuccess(response -> {
+                if (response.statusCode() != 200) {
+                    log.error("[PMB@HttpClientHelper::webServicePmbGet] Fail to get webservice" + response.statusMessage());
+                    response.bodyHandler(event -> {
+                        log.error("[PMB@HttpClientHelper::webServicePmbGet] Returning body after GET CALL : " + pmbUrl + ", Returning body : " + event.toString("UTF-8"));handler.handle(new Either.Left<>("Returning body after GET CALL : " + pmbUrl + ", Returning body : " + event.toString("UTF-8")));
+                        if (!responseIsSent.getAndSet(true)) {
+                            httpClient.close();
+                        }
+                    });
+                }
+
                 final Buffer buff = Buffer.buffer();
                 response.handler(buff::appendBuffer);
                 response.endHandler(end -> {
@@ -92,33 +116,13 @@ public class HttpClientHelper extends ControllerHelper {
                         httpClient.close();
                     }
                 });
-            } else {
-                log.error("Fail to get webservice" + response.statusMessage());
-                response.bodyHandler(event -> {
-                    log.error("Returning body after GET CALL : " + pmbUrl + ", Returning body : " + event.toString("UTF-8"));
-                    handler.handle(new Either.Left<>("Returning body after GET CALL : " + pmbUrl + ", Returning body : " + event.toString("UTF-8")));
-                    if (!responseIsSent.getAndSet(true)) {
-                        httpClient.close();
-                    }
-                });
-            }
-        });
-        for(String key : request.headers().names()){
-            httpClientRequest.putHeader(key, request.getHeader(key));
-        }
-        httpClientRequest.putHeader("Host", pmbConfig.getString("header"));
-        httpClientRequest.putHeader("Content-type", "application/x-www-form-urlencoded");
-        //Typically an unresolved Address, a timeout about connection or response
-        httpClientRequest.exceptionHandler(new Handler<Throwable>() {
-            @Override
-            public void handle(Throwable event) {
-                log.error(event.getMessage(), event);
+            })
+            .onFailure(throwable -> {
+                log.error("[PMB@HttpClientHelper::webServicePmbGet] " + throwable.getMessage(), throwable);
                 if (!responseIsSent.getAndSet(true)) {
-                    handle(event);
                     httpClient.close();
                 }
-            }
-        }).setFollowRedirects(true).end();
+            });
     }
 
     private static String decompress(Buffer buffer) throws IOException {
