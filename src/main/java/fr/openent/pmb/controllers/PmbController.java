@@ -5,8 +5,10 @@ import fr.openent.pmb.core.constants.Field;
 import fr.openent.pmb.helper.HttpClientHelper;
 import fr.openent.pmb.services.ExportService;
 import fr.openent.pmb.services.SchoolService;
+import fr.openent.pmb.services.UserService;
 import fr.openent.pmb.services.impl.DefaultExportService;
 import fr.openent.pmb.services.impl.DefaultSchoolService;
+import fr.openent.pmb.services.impl.DefaultUserService;
 import fr.openent.pmb.worker.AmassWorker;
 import fr.wseduc.bus.BusAddress;
 import fr.wseduc.rs.Get;
@@ -24,7 +26,6 @@ import io.vertx.core.logging.LoggerFactory;
 import org.entcore.common.controller.ControllerHelper;
 import org.entcore.common.http.filter.ResourceFilter;
 import org.entcore.common.http.filter.SuperAdminFilter;
-import org.entcore.common.user.UserInfos;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
@@ -39,11 +40,13 @@ public class PmbController extends ControllerHelper {
     private static final Logger log = LoggerFactory.getLogger(PmbController.class);
     private final ExportService exportService;
     private final SchoolService schoolService;
+    private final UserService userService;
 
     public PmbController(JsonObject exportConfig) {
         super();
         this.exportService = new DefaultExportService(exportConfig);
         this.schoolService = new DefaultSchoolService();
+        this.userService = new DefaultUserService();
     }
 
     @Get("")
@@ -117,45 +120,46 @@ public class PmbController extends ControllerHelper {
     public void listUserInStructuresByUAI(final HttpServerRequest request) {
         String uai = request.getParam("uai");
         String type = request.getParam("type");
-        if(uai == null){
-            log.error("No uai sent in request pmb/structures/list");
+        if(uai == null || type == null){
+            log.error("[Pmb-connector@PmbController::listUserInStructuresByUAI] No uai/type sent in request.");
             badRequest(request);
         }else{
             JsonArray UAIs = new JsonArray().add(uai);
-            if (type != null && type.equals(Pmb.MANAGER_TYPE_PRET)) {
-                directoryUsersExport(request, UAIs);
+            if (type.equals(Pmb.USER_TYPE_STUDENT) || type.equals(Pmb.USER_TYPE_TEACHER) || type.equals(Pmb.USER_TYPE_PERSONNEL)) {
+                directoryUsersExport(request, UAIs, type);
             } else {
-                schoolService.getCity(uai, handler -> {
-                    if (handler.isLeft()) {
-                        log.error("Unable to retrieve structures from this city", handler.left().getValue());
-                        badRequest(request);
-                    } else {
-                        JsonArray structures = handler.right().getValue();
-                        buildUAIList(structures, UAIs, uai);
-                        directoryUsersExport(request, UAIs);
-                    }
-                });
+                log.error("[Pmb-connector@PmbController::listUserInStructuresByUAI] wrong type sent in request.");
+                badRequest(request);
             }
         }
     }
 
-    private void directoryUsersExport(HttpServerRequest request, JsonArray UAIs) {
+    private void directoryUsersExport(HttpServerRequest request, JsonArray UAIs, String type) {
         StringBuilder url = new StringBuilder().append(pmbConfig.getString("host"))
-                .append("/directory/user/structures/list?");
+                .append("/directory/user/structures/list?full=true&");
         for (Object UAI : UAIs) {
             url.append("uai=").append((String) UAI).append("&");
         }
+        url.append("type=").append(type);
         try {
-            HttpClientHelper.webServicePmbGet(url.deleteCharAt(url.lastIndexOf("&")).toString(), request, handler -> {
+            HttpClientHelper.webServicePmbGet(url.toString(), request, handler -> {
                 if (handler.isLeft()) {
-                    log.error("Unable to retrieve users from this structures", handler.left().getValue());
+                    log.error("[Pmb-connector@PmbController::directoryUsersExport] Unable to retrieve users from this structures" + handler.left().getValue());
                     badRequest(request);
                 } else {
                     JsonArray users = handler.right().getValue().toJsonArray();
-                    Renders.renderJson(request, users);
+                    userService.mergeUserInfos(users, UAIs, type)
+                            .onSuccess(usersMerged -> {
+                                Renders.renderJson(request, usersMerged);
+                            })
+                            .onFailure(err -> {
+                                log.error("[Pmb-connector@PmbController::directoryUsersExport] Unable to merge users infos" + err.getMessage());
+                                badRequest(request);
+                            });
                 }
             });
         } catch (UnsupportedEncodingException e) {
+            log.error("[Pmb-connector@PmbController::directoryUsersExport] Failed to get users from directory module");
             e.printStackTrace();
         }
     }
