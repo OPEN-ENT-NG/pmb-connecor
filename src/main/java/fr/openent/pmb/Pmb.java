@@ -20,6 +20,11 @@ public class Pmb extends BaseServer {
     public static final String MANAGER_TYPE_PRET = "pret";
     public static final String MANAGER_TYPE_CDI = "cdi";
 
+
+    public static final String USER_TYPE_STUDENT = "Student";
+    public static final String USER_TYPE_TEACHER = "Teacher";
+    public static final String USER_TYPE_PERSONNEL = "Personnel";
+
     public static Vertx pmbVertx;
     public static JsonObject pmbConfig;
 
