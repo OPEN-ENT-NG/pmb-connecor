@@ -8,8 +8,12 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.net.ProxyOptions;
 import org.entcore.common.controller.ControllerHelper;
+
+import java.io.*;
+import java.util.zip.GZIPInputStream;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -57,7 +61,7 @@ public class HttpClientHelper extends ControllerHelper {
     }
 
     public static void webServicePmbGet(String pmbUrl, HttpServerRequest request,
-            Handler<Either<String, Buffer>> handler) throws UnsupportedEncodingException {
+            Handler<Either<String, JsonArray>> handler) throws UnsupportedEncodingException {
 
         final AtomicBoolean responseIsSent = new AtomicBoolean(false);
         final HttpClient httpClient = HttpClientHelper.createHttpClient(pmbVertx);
@@ -75,7 +79,15 @@ public class HttpClientHelper extends ControllerHelper {
                 final Buffer buff = Buffer.buffer();
                 response.handler(buff::appendBuffer);
                 response.endHandler(end -> {
-                    handler.handle(new Either.Right<>(buff));
+                    if("gzip".equals(response.getHeader("Content-Encoding"))){
+                        try {
+                            handler.handle(new Either.Right<>(new JsonArray(decompress(buff))));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        handler.handle(new Either.Right<>(new JsonArray(buff.toString())));
+                    }
                     if (!responseIsSent.getAndSet(true)) {
                         httpClient.close();
                     }
@@ -107,5 +119,19 @@ public class HttpClientHelper extends ControllerHelper {
                 }
             }
         }).setFollowRedirects(true).end();
+    }
+
+    private static String decompress(Buffer buffer) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(buffer.getBytes());
+        GZIPInputStream gzis = new GZIPInputStream(bais);
+        InputStreamReader reader = new InputStreamReader(gzis);
+        BufferedReader in = new BufferedReader(reader);
+
+        String readed;
+        String res = new String();
+        while ((readed = in.readLine()) != null) {
+            res += readed;
+        }
+        return res;
     }
 }
