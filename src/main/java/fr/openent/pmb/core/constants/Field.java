@@ -12,4 +12,11 @@ public class Field {
     public static final String GROUP_NAME = "group_name";
     public static final String GROUP_MANAGER_LEND_MANUAL = "group_manager_lend_manual";
     public static final String UAIS = "uais";
+    public static final String EXTERNAL_ID = "externalId";
+
+    public static final String EMAIL = "email";
+    public static final String ADDRESS = "address";
+    public static final String ZIP_CODE = "zipCode";
+    public static final String COUNTRY = "country";
+    public static final String CITY = "city";
 }
