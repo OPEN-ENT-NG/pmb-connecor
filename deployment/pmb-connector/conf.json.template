@@ -1,5 +1,5 @@
     {
-      "name": "fr.openent~pmb-connector~1.6-SNAPSHOT",
+      "name": "fr.openent~pmb-connector~1.7.0-rc+2",
       "config": {
         "main" : "fr.openent.pmb.Pmb",
         "port" : 8068,
