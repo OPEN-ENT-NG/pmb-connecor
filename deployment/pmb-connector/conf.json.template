@@ -1,5 +1,5 @@
     {
-      "name": "fr.openent~pmb-connector~2.0-b2school-SNAPSHOT",
+      "name": "fr.openent~pmb-connector~${pmbConnectorVersion}",
       "config": {
         "main" : "fr.openent.pmb.Pmb",
         "port" : 8068,
